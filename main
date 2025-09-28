@@ -1,0 +1,182 @@
+# PART 3: Basic python script to decode UART light pulses values to text
+
+import numpy as np
+
+# Sample bright values
+data = """125
+125
+125
+126
+127
+126
+125
+125
+125
+124
+124
+123
+123
+123
+122
+123
+122
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+123
+121
+108
+99
+94
+91
+89
+87
+77
+74
+73
+76
+109
+126
+133
+136
+138
+137
+137
+135
+135
+135
+134
+134
+134
+134
+133
+143
+143
+150
+135
+124
+117
+110
+103
+97
+92
+64
+62
+57
+74
+106
+124
+134
+137
+137
+138
+147
+146
+144
+153
+138
+124
+113
+109
+105
+100
+77
+59
+57
+54
+90
+117
+"""
+
+
+#Convert pasted CSV to list
+data_list = [float(x) for x in data.strip().splitlines()]
+
+
+#========== Fine tuning controls =================
+
+chunk_size = 10             # Split into chunks 
+noise_reducer = 5           # Delete the largest numbers in a small number list (noise reduction)
+delete_list = 10            # Delete a list that has less than "X" members
+
+
+#========== Finne tunning controls END =================
+
+
+arr = np.array(data_list) #converts your Python list into NumPy array for fast processing
+
+
+
+#separate list into chunk of X size in the array.
+chunks = [arr[i:i+chunk_size] for i in range(0, len(arr), chunk_size)]
+
+print(chunks)
+
+# For each chunk, drop the "X" largest numbers to reduce noise in the low value numbers
+reduced_chunks = []
+for chunk in chunks:
+    sorted_chunk = sorted(chunk)  # sort ascending
+    reduced_chunks.append(sorted_chunk[:-noise_reducer])  # keeps all except last noise_reducer value (largest per list in the array)
+
+print("Reduced chunks:", reduced_chunks)
+
+# delete from array any list that has less than "X" members in the array
+filtered_chunks = [sublist for sublist in chunks if len(sublist) >= delete_list]
+
+# Compute rounded average of each reduced chunk
+averages = [round(sum(chunk)/len(chunk)) for chunk in filtered_chunks]
+print("Averages:", averages)
+
+# convert to binary bits
+bits = []
+for avg in averages:
+    if avg < 109: # if number is smallet thn 109 is a 1
+        bits.append(1)
+    elif avg > 110: # if number is bigger thn 109 is a 0
+        bits.append(0)
+
+print("Bits:", bits)
+
+# get rid of Start and Stop bit:
+bits_clean = bits[1:-1]
+print("Bits_clean:", bits_clean)
+
+# Flip the number to make it easier to read.
+binary = bits_clean[::-1]
+print("Binary:", binary)
+
+# Convert to ASCII (8 bits per char) function
+def bits_to_text(binary):
+    chars = []
+    for i in range(0, len(binary), 8):
+        byte = binary[i:i+8]
+        if len(byte) < 8:
+            break
+        val = int("".join(map(str, byte)), 2)
+        chars.append(chr(val))
+    return "".join(chars)
+
+text = bits_to_text(binary)
+
+# display decoded text:
+print("Decoded text:", text)
